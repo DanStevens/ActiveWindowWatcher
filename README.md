@@ -12,5 +12,3 @@ to true at design-time or run-time and the component will automatically respond
 to the appropriate Windows events and update the respective properties to 
 correspond with the currently active window and will call the Changed event (if 
 EnableRaisingEvents is true). 
-
-

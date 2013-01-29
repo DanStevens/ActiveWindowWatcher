@@ -13,7 +13,7 @@ namespace System.Diagnostics
     /// property is set to false by default. Set this to true at design-time or run-time and the component will 
     /// automatically respond to the appropriate Windows events and update the respective properties to correspond 
     /// with the currently active window and will call the Changed event (if EnableRaisingEvents is true).</remarks> 
-    [System.ComponentModel.DesignerCategory("")]
+    [System.ComponentModel.DesignerCategory(""), DefaultProperty("Enabled")]
     public class ActiveWindowWatcher : Component
     {
 
@@ -21,6 +21,8 @@ namespace System.Diagnostics
 
         private bool enabled;
         private int processId;
+        private int threadId;
+        private Process process;
         private WinEventDelegate dele = null;
         private IntPtr m_hhook = IntPtr.Zero;
 
@@ -52,12 +54,12 @@ namespace System.Diagnostics
         private void update()
         {
             processId = 0;
-            ThreadId = 0;
+            threadId = 0;
 
             IntPtr handle = IntPtr.Zero;
             handle = GetForegroundWindow();
-            ThreadId = GetWindowThreadProcessId(handle, out processId);
-            Process = Process.GetProcessById(processId);
+            threadId = GetWindowThreadProcessId(handle, out processId);
+            process = Process.GetProcessById(processId);
 
             if (EnableRaisingEvents)
                 Changed(this, new EventArgs());
@@ -85,7 +87,8 @@ namespace System.Diagnostics
         #region Public members
 
         /// <summary>Gets the ID of the process associated with the currently active window.</summary>
-        [Browsable(false)]
+        [Category("Read-Only Properties"), DefaultValue(0)]
+        [Description("The ID of the process associated with the currently active window.")]
         public int ProcessId
         {
             get
@@ -95,19 +98,57 @@ namespace System.Diagnostics
         }
 
         /// <summary>Gets the ID of the thread associated with the currently active window.</summary>
-        [Browsable(false)]
-        public int ThreadId { get; private set; }
+        [Category("Read-Only Properties"), DefaultValue(0)]
+        [Description("The ID of the thread associated with the currently active window.")]
+        public int ThreadId
+        {
+            get
+            {
+                return threadId;
+            }
+        }
 
-        /// <summary>Gets an object representing the process associated with the currently active window.</summary>
-        [Browsable(false)]
-        public Process Process { get; private set; }
+        /// <summary>An object representing the process associated with the currently active window.</summary>
+        [Category("Read-Only Properties"), DefaultValue(null)]
+        [Description("An object representing the process associated with the currently active window.")]
+        public Process Process
+        {
+            get
+            {
+                return process;
+            }
+        }
+
+        /// <summary>Gets a value equivalent to calling Process.MainWindowTitle.</summary>
+        [Category("Read-Only Properties"), DefaultValue(null)]
+        [Description("The title of currently active window.")]
+        public string WindowTitle
+        {
+            get
+            {
+                return process != null ? process.MainWindowTitle : "";
+            }
+        }
+
+        /// <summary>Gets a value equivalent to calling Process.MainModule.ModuleName.</summary>
+        [Category("Read-Only Properties"), DefaultValue(null)]
+        [Description("The name of the module (executable) associated with the currenctly active window.")]
+        public string ModuleName
+        {
+            get
+            {
+                return process != null ? process.MainModule.ModuleName : "";
+            }
+        }
+
 
         /// <summary>Gets a value indicating whether the ActiveWindowWatcher component is enabled.</summary>
         /// <remarks>When set to <b>true</b>, the ActiveWindowWatcher component will update the <see cref="ProcessId"/>,
-        /// <see cref="ThreadId"/> and <see cref=">Process"/> properties in response to changes to the active window 
+        /// <see cref="threadId"/> and <see cref=">Process"/> properties in response to changes to the active window 
         /// and will trigger the <see cref="Changed"/> event (unless <see cref="EnableRaisingEvents"/> property is
         /// <b>false</b>.</remarks>
-        [DefaultValue(false)]
+        [Category("Behavior"), DefaultValue(false)]
+        [Description("Indicates whether the component is enabled or not.")]
         public bool Enabled
         {
             get
@@ -132,12 +173,14 @@ namespace System.Diagnostics
         /// <para>Setting Enabled to <b>true</b> is the same as calling <see cref="Enable"/>, while setting Enabled to
         /// <b>false</b> is the same as calling <see cref="Disable"/>.</para>
         /// <para>If set to <b>false</b>, the component will not raise any events, however the
-        /// <see cref="ProcessId"/>, <see cref="ThreadId"/> and <see cref=">Process"/> properties will continue
+        /// <see cref="ProcessId"/>, <see cref="threadId"/> and <see cref=">Process"/> properties will continue
         /// to update when the active window changes.</para></remarks>
-        [DefaultValue(true)]
+        [Category("Misc"), DefaultValue(true)]
+        [Description("Indicates whether or not the component will trigger events.")]
         public bool EnableRaisingEvents { get; set; }
 
         /// <summary>Occurs when the currently active window changes.</summary>
+        [Description("Occurs when the currently active window changes.")]
         public event EventHandler Changed;
 
         /// <summary>Intializes a new instance of the ActiveWindowWatcher class.</summary>
@@ -146,13 +189,13 @@ namespace System.Diagnostics
             enabled = false;
             EnableRaisingEvents = true;
             processId = 0;
-            ThreadId = 0;
-            Process = null;
+            threadId = 0;
+            process = null;
         }
 
         /// <summary>Enables the ActiveWindowWatcher component.</summary>
         /// <remarks>When enabled, the <see cref="ProcessId"/>,
-        /// <see cref="ThreadId"/> and <see cref=">Process"/> properties will update to reflect the state of currently
+        /// <see cref="threadId"/> and <see cref=">Process"/> properties will update to reflect the state of currently
         /// active window and the <see cref="Changed"/> event  will occurr whenever the active window is changed
         /// (unless <see cref="EnableRaisingEvents"/> property is <b>false</b>.</remarks>
         public void Enable()
@@ -163,7 +206,7 @@ namespace System.Diagnostics
         }
 
         /// <summary>Disables the ActiveWindowWatcher component.</summary>
-        /// <remarks>When disabled, the <see cref="ProcessId"/>, <see cref="ThreadId"/> and <see cref=">Process"/>
+        /// <remarks>When disabled, the <see cref="ProcessId"/>, <see cref="threadId"/> and <see cref=">Process"/>
         /// properties will remaining unchanged, until the component is enabled.</remarks>
         public void Disable()
         {
